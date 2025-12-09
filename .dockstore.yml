@@ -1,0 +1,6 @@
+version: 1.2
+workflows:
+  - name: nonb_methylation_complete_pipeline
+    subclass: WDL
+    primaryDescriptorPath: /nonB_meth_v4.wdl
+    testParameterFiles: []
