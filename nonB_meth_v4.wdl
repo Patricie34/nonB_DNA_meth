@@ -336,8 +336,8 @@ task run_gfa {
   }
   runtime {
     docker: "patricie/nonb_gfa-image:v1.2" 
-    cpu: 4
-    memory: "16G"
+    cpu: 2
+    memory: "64G"
   }
 }
 
