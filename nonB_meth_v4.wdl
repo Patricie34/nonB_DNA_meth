@@ -199,7 +199,7 @@ task extract_contig_from_split {
     set -eou pipefail
     mkdir -p out
     
-    # Simple extraction using awk (more reliable than split-fasta for this)
+    # Simple extraction using awk
     awk -v target_contig="~{contig}" '
     BEGIN { found = 0; target_header = ">" target_contig }
     /^>/ {
@@ -215,7 +215,8 @@ task extract_contig_from_split {
       exit 1
     fi
     
-    echo "out/~{contig}.fa"
+    # Output absolute path
+    echo "$(pwd)/out/~{contig}.fa"
   >>>
   output {
     File contig_fasta = read_string(stdout())
