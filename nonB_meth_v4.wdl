@@ -53,7 +53,6 @@ workflow nonb_methylation_complete_pipeline {
     
     # Process each bedMethyl file separately for this GFF
     scatter (bedmethyl_file in bedmethyl_files) {
-      # ADD THIS FILTERING STEP:
       call filter_methylation_by_contig {
         input:
           bedmethyl_file = bedmethyl_file,
@@ -63,7 +62,7 @@ workflow nonb_methylation_complete_pipeline {
       call intersect_methyl_single {
         input:
           motif_bed = gff_to_bed.motif_bed,
-          bedmethyl_file = filter_methylation_by_contig.filtered_bedmethyl  # Use filtered file
+          bedmethyl_file = filter_methylation_by_contig.filtered_bedmethyl
       }
     }
   }
@@ -74,8 +73,10 @@ workflow nonb_methylation_complete_pipeline {
     Array[File] tsv_files = flatten(run_gfa.tsv_files)
     Array[File] bed_files = gff_to_bed.motif_bed
     Array[File] methylation_results = flatten(intersect_methyl_single.motif_methylation_summary)
+    String workflow_summary = "Pipeline completed processing ${length(filter_contigs.filtered_contigs)} contigs"
   }
 }
+
 # -------------------------
 # TASK: split_fasta_task (Simplified)
 # Just extract contig names from FASTA
@@ -101,6 +102,7 @@ task split_fasta_task {
     memory: "2G"
   }
 }
+
 # -------------------------
 # TASK: filter_contigs (SIMPLEST APPROACH)
 # Filter contig names based on contig_filters
@@ -186,6 +188,7 @@ PY
     memory: "2G"
   }
 }
+
 # -------------------------
 # TASK: extract_contig_from_split (CORRECTED)
 # Extract specific contig from split directory (simplified)
@@ -197,7 +200,9 @@ task extract_contig_from_split {
   }
   command <<<
     set -eou pipefail
-    mkdir -p out
+    # Create a clear output directory structure
+    OUTPUT_DIR="extracted_contigs"
+    mkdir -p "${OUTPUT_DIR}"
     
     # Simple extraction using awk
     awk -v target_contig="~{contig}" '
@@ -207,19 +212,21 @@ task extract_contig_from_split {
         if ($0 == target_header) found = 1
     }
     found { print }
-    ' "~{fasta}" > "out/~{contig}.fa"
+    ' "~{fasta}" > "${OUTPUT_DIR}/~{contig}.fa"
     
     # Check if file was created and is not empty
-    if [ ! -s "out/~{contig}.fa" ]; then
+    if [ ! -s "${OUTPUT_DIR}/~{contig}.fa" ]; then
       echo "ERROR: Contig ~{contig} not found or empty" >&2
+      echo "Available contigs in FASTA:" >&2
+      grep "^>" "~{fasta}" | head -10 >&2
       exit 1
     fi
     
-    # Output absolute path
-    echo "$(pwd)/out/~{contig}.fa"
+    echo "Successfully created contig file" >&2
+    ls -la "${OUTPUT_DIR}/" >&2
   >>>
   output {
-    File contig_fasta = read_string(stdout())
+    File contig_fasta = "extracted_contigs/~{contig}.fa"
   }
   runtime {
     docker: "python:3.10-slim"
@@ -227,6 +234,7 @@ task extract_contig_from_split {
     memory: "2G"
   }
 }
+
 # -------------------------
 # TASK: run_gfa (FIXED)
 # Runs gfa on a single-contig fasta and allows motif selection
@@ -242,6 +250,30 @@ task run_gfa {
   command <<<
     set -eou pipefail
     mkdir -p out
+    
+    # DEBUG: Verify input file and show directory structure
+    echo "=== INPUT VERIFICATION ===" >&2
+    echo "Input contig_fasta: ~{contig_fasta}" >&2
+    echo "File exists: $(test -f "~{contig_fasta}" && echo "YES" || echo "NO")" >&2
+    if [ -f "~{contig_fasta}" ]; then
+      echo "File size: $(wc -c "~{contig_fasta}" | cut -d' ' -f1)" >&2
+      echo "First 2 lines:" >&2
+      head -2 "~{contig_fasta}" >&2
+    fi
+    echo "Current directory contents:" >&2
+    ls -la >&2
+    echo "=== END INPUT VERIFICATION ===" >&2
+    
+    # Ensure the input file exists
+    if [ ! -f "~{contig_fasta}" ]; then
+      echo "FATAL ERROR: Input contig FASTA file not found: ~{contig_fasta}" >&2
+      exit 1
+    fi
+    
+    # Create necessary directories to prevent GFA path issues
+    mkdir -p /mnt/disks/cromwell_root 2>/dev/null || true
+    touch /mnt/disks/cromwell_root/stderr 2>/dev/null || true
+    touch stderr 2>/dev/null || true
     
     # build skip flags: default skip everything, then remove skip for requested motifs
     ALL_FLAGS="-skipAPR -skipSTR -skipDR -skipMR -skipIR -skipGQ -skipZ -skipSlipped -skipCruciform -skipTriplex"
@@ -272,18 +304,31 @@ task run_gfa {
     # normalize SKIP_FLAGS
     SKIP_FLAGS=$(echo ${SKIP_FLAGS} | xargs)
     
-    # call gfa
+    # call gfa with strict error handling
     OUTP="out/~{out_prefix}"
     echo "Running gfa: skip flags: ${SKIP_FLAGS}" >&2
+    echo "Input file: ~{contig_fasta}" >&2
+    echo "Output prefix: ${OUTP}" >&2
     
-    if ! /usr/local/bin/gfa -seq "~{contig_fasta}" -out "${OUTP}" ${SKIP_FLAGS} ~{extra_gfa_switches}; then
-      echo "ERROR: gfa failed on ~{contig_fasta}" >&2
-      exit 1
+    # Run GFA with strict error handling - will fail the task if GFA fails
+    /usr/local/bin/gfa -seq "~{contig_fasta}" -out "${OUTP}" ${SKIP_FLAGS} ~{extra_gfa_switches} 2>&1
+    
+    # Check what files were actually created
+    echo "=== OUTPUT FILES CHECK ===" >&2
+    if ls "out/~{out_prefix}"*.gff 1> /dev/null 2>&1; then
+      echo "GFF files created:" >&2
+      ls -la "out/~{out_prefix}"*.gff >&2
+    else
+      echo "No GFF files found - this may indicate GFA did not find motifs" >&2
     fi
     
-    # list produced gff/tsv files
-    ls "out/~{out_prefix}"*.gff 2>/dev/null || true
-    ls "out/~{out_prefix}"*.tsv 2>/dev/null || true
+    if ls "out/~{out_prefix}"*.tsv 1> /dev/null 2>&1; then
+      echo "TSV files created:" >&2
+      ls -la "out/~{out_prefix}"*.tsv >&2
+    else
+      echo "No TSV files found" >&2
+    fi
+    echo "=== END OUTPUT FILES CHECK ===" >&2
   >>>
   output {
     Array[File] gff_files = glob("out/~{out_prefix}*.gff")
@@ -291,10 +336,11 @@ task run_gfa {
   }
   runtime {
     docker: "patricie/nonb_gfa-image:v1.2" 
-    cpu: 2
-    memory: "8G"
+    cpu: 4
+    memory: "16G"
   }
 }
+
 task gff_to_bed {
   input {
     File gff
