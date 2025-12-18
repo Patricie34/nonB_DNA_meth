@@ -95,7 +95,7 @@ cromwell run nonB_meth_v5.wdl -i nonB_meth_v4_inputs.json
 
 This repository includes Python scripts for downstream analysis and visualization of methylation patterns at non-B DNA motifs.
 
-### `analyze_methylation_motifs.py`
+### `boxplot_violin.py`
 
 A comprehensive analysis script that generates comparative visualizations of methylation levels across different non-B DNA motifs.
 
@@ -110,7 +110,7 @@ A comprehensive analysis script that generates comparative visualizations of met
 #### Usage
 
 ```bash
-python analyze_methylation_motifs.py \
+python boxplot_violin.py \
     --input-files file1.bed file2.bed file3.bed \
     --output-prefix "motif_analysis" \
     --chromosome "chrX" \
@@ -122,7 +122,7 @@ python analyze_methylation_motifs.py \
 - **Motif classes:** Z-DNA and G-quadruplex
 
 **Required Python Packages**
-```
+```bash
 pip install pandas matplotlib seaborn scipy numpy
 ```
 🚀 Getting Started
@@ -134,6 +134,42 @@ These are the *_intersect_*.bed outputs from the workflow.
 Use the analysis script to visualize results:
 
 ```bash
-python analyze_methylation_motifs.py --input-files /path/to/intersected/files/*.bed
+python boxplot_violin.py --input-files /path/to/intersected/files/*.bed
+```
+
+Examples of output plots:
+
+![Boxplot of methylation levels](docs/figures/motif_analysis_comparison_chr1.png)
+
+![Boxplot of methylation levels](docs/figures/motif_analysis_violin_chr1.png)
+
+## 🎨 Additional Visualization Scripts
+
+### `plot_region.py`
+
+Creates genome-browser style visualizations showing methylation levels at specific genomic regions.
+
+#### Features
+
+- Genome-browser style plots with rectangular visualization  
+- Color-coded by modification type (5mC, 5hmC, G4, Z-DNA, etc.)  
+- Automatic color assignment based on filename patterns  
+- Sample size annotations  
+- Flexible input handling  
+
+#### Usage
+
+```bash
+python plot_region.py \
+    --bed-files file1.bed file2.bed file3.bed \
+    --chromosome "chrX_MATERNAL" \
+    --start 1000000 \
+    --end 2000000 \
+    --output-dir "./region_plots"
+```
+
+Examples of output plot:
+
+![Boxplot of methylation levels](docs/figures/genomic_region_methylation_chr1_PATERNAL_248000000_249000000.png)
 ```
 
