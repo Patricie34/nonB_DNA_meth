@@ -90,12 +90,50 @@ cromwell run nonB_meth_v5.wdl -i nonB_meth_v4_inputs.json
 | `processed_contigs`     | List of contigs that were analyzed |
 | `workflow_summary`      | Summary string of the run |
 
-## 🧪 Example Use Case
 
-This pipeline has been tested on:
+## 📊 Visualization Scripts
 
+This repository includes Python scripts for downstream analysis and visualization of methylation patterns at non-B DNA motifs.
+
+### `analyze_methylation_motifs.py`
+
+A comprehensive analysis script that generates comparative visualizations of methylation levels across different non-B DNA motifs.
+
+#### Features
+
+- Box plots and violin plots comparing methylation levels  
+- Statistical analysis between motif types  
+- Summary statistics export to CSV  
+- Flexible input handling (individual files or file lists)  
+- Automatic motif type detection from filenames  
+
+#### Usage
+
+```bash
+python analyze_methylation_motifs.py \
+    --input-files file1.bed file2.bed file3.bed \
+    --output-prefix "motif_analysis" \
+    --chromosome "chrX" \
+    --haplotype "Maternal" \
+    --output-dir "./plots"
+```
 - **Reference genome:** Human (hg002)  
 - **Methylation data:** ONT 5mC and 5hmC  
 - **Motif classes:** Z-DNA and G-quadruplex
 
+**Required Python Packages**
+```
+pip install pandas matplotlib seaborn scipy numpy
+```
+🚀 Getting Started
+
+Run the WDL pipeline to generate intersected methylation files:
+
+These are the *_intersect_*.bed outputs from the workflow.
+
+Use the analysis script to visualize results:
+
+```bash
+python analyze_methylation_motifs.py --input-files /path/to/intersected/files/*.bed
+```
 
