@@ -65,6 +65,7 @@ This pipeline performs the following steps:
     "/path/to/Q100_ONT_5hmC.bed"
   ]
 }
+```
 
 ## ▶️ Running the Pipeline
 
