@@ -1,5 +1,9 @@
 # 🧬 nonB DNA × Methylation Analysis Pipeline
 
+[![WDL](https://img.shields.io/badge/WDL-v1.0-blue)](https://openwdl.org/)
+[![Cromwell](https://img.shields.io/badge/Cromwell-Compatible-brightgreen)](https://cromwell.readthedocs.io/)
+[![GFA](https://img.shields.io/badge/GFA-Tool-orange)](https://github.com/abcsFrederick/non-B_gfa)
+
 A **Workflow Description Language (WDL)** pipeline to analyze the interplay between **non-B DNA structures** and **DNA methylation patterns**. This pipeline detects various non-B DNA motifs (e.g., G-quadruplexes, Z-DNA, etc.) in a genome and intersects them with methylation data from bedMethyl files to explore potential regulatory relationships.
 
 ---
